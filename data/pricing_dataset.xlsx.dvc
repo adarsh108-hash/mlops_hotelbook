@@ -1,0 +1,5 @@
+outs:
+- md5: f65ae002afdac240755a2dbbdaae9883
+  size: 103014
+  hash: md5
+  path: pricing_dataset.xlsx

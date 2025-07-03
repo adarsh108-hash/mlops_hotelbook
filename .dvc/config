@@ -1,0 +1,6 @@
+[core]
+    remote = storage
+['remote "github-storage"']
+    url = ../ https:/github.com/adarsh108-hash/mlops_hotelbook.git
+['remote "storage"']
+    url = ..

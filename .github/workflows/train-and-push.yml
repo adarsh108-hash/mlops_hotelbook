@@ -1,0 +1,61 @@
+name: train-and-push
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * *'  # every day at 02:00 UTC
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) Check out the repo with write permissions
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
+      # 2) Set up DVC (for local versioning of metrics & models)
+      - uses: iterative/setup-dvc@v2
+
+      # 3) Install Python dependencies
+      - name: Install dependencies
+        run: pip install --no-cache-dir -r requirements.txt
+
+      # 4) Pull only the master datasets via DVC
+      - name: Pull master data
+        run: dvc pull data/occupancy_dataset.xlsx.dvc data/pricing_dataset.xlsx.dvc
+
+      # 5) Run the pipeline (trains fresh models locally)
+      - name: Run pipeline
+        run: python main.py
+
+      # 6) Ensure artifact directories exist so DVC can add them
+      - name: Prepare artifact directories
+        run: |
+          mkdir -p models/occupancy models/rewards models/pricing metrics
+
+      # 7) Track updated artifacts and metrics with DVC
+      - name: Track updated artifacts
+        run: dvc add models/occupancy models/rewards models/pricing metrics
+
+      # 8) Push new artifacts to the DVC remote (optional if configured)
+      - name: Push artifacts to DVC remote
+        run: dvc push
+
+      # 9) Commit updated DVC pointers back to Git
+      - name: Commit updated DVC pointers
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add \
+            models/occupancy.dvc \
+            models/rewards.dvc \
+            models/pricing.dvc \
+            metrics.dvc
+          git commit -m "chore: update models & metrics [skip ci]" || echo "No pointer changes"
+          git push origin main
